@@ -908,31 +908,49 @@ static int bq2589x_wall_get_property(struct power_supply *psy,
 	return 0;
 }
 
+static const struct power_supply_desc bq2589x_usb_desc = {
+	.name			= "bq2589x-usb",
+	.type			= POWER_SUPPLY_TYPE_USB,
+	.properties		= bq2589x_charger_props,
+	.num_properties		= ARRAY_SIZE(bq2589x_charger_props),
+	.get_property		= bq2589x_usb_get_property,
+	.set_property		= NULL, // TODO
+	.external_power_changed	= NULL,
+};
+
+static const struct power_supply_desc bq2589x_wall_desc = {
+	.name			= "bq2589x-Wall",
+	.type			= POWER_SUPPLY_TYPE_MAINS,
+	.properties		= bq2589x_charger_props,
+	.num_properties		= ARRAY_SIZE(bq2589x_charger_props),
+	.get_property		= bq2589x_wall_get_property,
+	.set_property		= NULL, // TODO
+	.external_power_changed	= NULL,
+};
+
+
 static int bq2589x_psy_register(struct bq2589x *bq)
 {
 	int ret;
 
-	bq->usb.name = "bq2589x-usb";
-	bq->usb.type = POWER_SUPPLY_TYPE_USB;
-	bq->usb.properties = bq2589x_charger_props;
-	bq->usb.num_properties = ARRAY_SIZE(bq2589x_charger_props);
-	bq->usb.get_property = bq2589x_usb_get_property;
-	bq->usb.external_power_changed = NULL;
+    struct power_supply_desc *usbdesc;
+    struct power_supply_desc *walldesc;
 
-	ret = power_supply_register(bq->dev, &bq->usb);
+    bq->usb = devm_power_supply_register(&(bq->dev),
+						   &bq2589x_usb_desc,
+						   NULL);
+
+	ret = devm_power_supply_register(bq->dev,
+						   &bq2589x_usb_desc,
+						   NULL);
 	if (ret < 0) {
 		dev_err(bq->dev, "%s:failed to register usb psy:%d\n", __func__, ret);
 		return ret;
 	}
 
-	bq->wall.name = "bq2589x-Wall";
-	bq->wall.type = POWER_SUPPLY_TYPE_MAINS;
-	bq->wall.properties = bq2589x_charger_props;
-	bq->wall.num_properties = ARRAY_SIZE(bq2589x_charger_props);
-	bq->wall.get_property = bq2589x_wall_get_property;
-	bq->wall.external_power_changed = NULL;
+    bq->wall.desc = bq2589x_wall_desc;
 
-	ret = power_supply_register(bq->dev, &bq->wall);
+	ret = power_supply_register(bq->dev, &bq->wall, NULL);
 	if (ret < 0) {
 		dev_err(bq->dev, "%s:failed to register wall psy:%d\n", __func__, ret);
 		goto fail_1;
