@@ -91,8 +91,8 @@ struct bq2589x {
 	struct delayed_work pe_volt_tune_work;
 	struct delayed_work check_pe_tuneup_work;
 
-	struct power_supply usb;
-	struct power_supply wall;
+	struct power_supply *usb;
+	struct power_supply *wall;
 	struct power_supply *batt_psy;
 };
 
@@ -933,14 +933,7 @@ static int bq2589x_psy_register(struct bq2589x *bq)
 {
 	int ret;
 
-    struct power_supply_desc *usbdesc;
-    struct power_supply_desc *walldesc;
-
-    bq->usb = devm_power_supply_register(&(bq->dev),
-						   &bq2589x_usb_desc,
-						   NULL);
-
-	ret = devm_power_supply_register(bq->dev,
+    bq->usb = power_supply_register(bq->dev,
 						   &bq2589x_usb_desc,
 						   NULL);
 	if (ret < 0) {
@@ -948,9 +941,7 @@ static int bq2589x_psy_register(struct bq2589x *bq)
 		return ret;
 	}
 
-    bq->wall.desc = bq2589x_wall_desc;
-
-	ret = power_supply_register(bq->dev, &bq->wall, NULL);
+    bq->wall = power_supply_register(bq->dev, &bq2589x_wall_desc, NULL);
 	if (ret < 0) {
 		dev_err(bq->dev, "%s:failed to register wall psy:%d\n", __func__, ret);
 		goto fail_1;
@@ -959,15 +950,15 @@ static int bq2589x_psy_register(struct bq2589x *bq)
 	return 0;
 
 fail_1:
-	power_supply_unregister(&bq->usb);
+	power_supply_unregister(bq->usb);
 
 	return ret;
 }
 
 static void bq2589x_psy_unregister(struct bq2589x *bq)
 {
-	power_supply_unregister(&bq->usb);
-	power_supply_unregister(&bq->wall);
+	power_supply_unregister(bq->usb);
+	power_supply_unregister(bq->wall);
 }
 
 static ssize_t bq2589x_show_registers(struct device *dev,
